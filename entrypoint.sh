@@ -5,6 +5,9 @@ set -euo pipefail
 
 cd /home/runner/actions-runner
 
+# Pastikan _work (volume) bisa ditulis user runner, termasuk volume lama milik root
+sudo chown -R runner:runner /home/runner/actions-runner/_work || true
+
 # Akses ke docker.sock dari host: samakan GID group
 if [ -S /var/run/docker.sock ]; then
   sudo chmod 666 /var/run/docker.sock || true

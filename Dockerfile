@@ -31,6 +31,9 @@ RUN ARCH=$([ "$TARGETARCH" = "arm64" ] && echo arm64 || echo x64) \
     && sudo ./bin/installdependencies.sh \
     && sudo rm -rf /var/lib/apt/lists/*
 
+# folder kerja dimiliki runner (supaya named volume tidak dibuat sebagai root)
+RUN mkdir -p /home/runner/actions-runner/_work
+
 COPY --chown=runner:runner entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
