@@ -1,30 +1,22 @@
 # GitHub Actions Self-Hosted Runner (Docker)
 
-Menjalankan GitHub Actions runner di dalam container Docker. Struktur dan perintahnya dibuat mirip dengan `gitlab-runner`.
+Menjalankan GitHub Actions runner di Docker memakai image siap pakai [`myoung34/github-runner`](https://github.com/myoung34/docker-github-actions-runner), tanpa Dockerfile sendiri. Cara pakainya mirip `gitlab-runner`: runner kosong, dan environment job ditentukan lewat `container:` di workflow (padanan `image:` di GitLab).
 
 ## Isi
 
 | File | Fungsi |
 |------|--------|
-| `Dockerfile` | Image Ubuntu 24.04 + runner resmi GitHub + docker CLI/buildx/compose |
-| `entrypoint.sh` | Ambil token, register runner, jalankan, unregister saat stop |
-| `docker-compose.yml` | Definisi service, mount `docker.sock`, volume `_work` |
+| `docker-compose.yml` | Service runner, mount `docker.sock` dan folder kerja |
 | `.env.example` | Contoh konfigurasi |
 | `Makefile` | Shortcut perintah |
 
 ## Prasyarat
 
 - Docker + Docker Compose v2 di server
-- `make` (opsional, bisa pakai `docker compose` langsung)
+- `make` (opsional)
 - Akses admin ke repo atau organisasi GitHub tujuan
 
-## Langkah 1 - Siapkan token
-
-Pilih salah satu.
-
-### Opsi A: Personal Access Token (disarankan)
-
-Token registrasi diambil otomatis setiap container start, jadi aman di-restart kapan saja.
+## Langkah 1 - Buat Personal Access Token
 
 1. GitHub → Settings → Developer settings → Personal access tokens.
 2. Buat token (classic) dengan scope:
@@ -32,58 +24,54 @@ Token registrasi diambil otomatis setiap container start, jadi aman di-restart k
    - Runner untuk **organisasi**: `admin:org`
 3. Salin token (`ghp_...`) ke `ACCESS_TOKEN`.
 
-### Opsi B: Registration token manual
-
-1. Buka repo (atau org) → Settings → Actions → Runners → **New self-hosted runner**.
-2. Salin nilai setelah `--token` ke `REGISTRATION_TOKEN`.
-
-Token ini **kedaluwarsa dalam 1 jam** dan hanya cukup untuk start pertama. Setelah runner terdaftar, konfigurasinya tersimpan di dalam container. Jika container di-recreate, Anda butuh token baru.
-
 ## Langkah 2 - Konfigurasi
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
+Runner untuk satu repo:
 
 ```env
-GITHUB_URL=https://github.com/OWNER/REPO     # atau https://github.com/ORG
+RUNNER_SCOPE=repo
+REPO_URL=https://github.com/OWNER/REPO
 ACCESS_TOKEN=ghp_xxxxxxxxxxxx
-RUNNER_NAME=self-hosted-runner
-RUNNER_LABELS=self-hosted,docker
+```
+
+Runner untuk organisasi:
+
+```env
+RUNNER_SCOPE=org
+ORG_NAME=nama-org
+ACCESS_TOKEN=ghp_xxxxxxxxxxxx
 ```
 
 | Variabel | Keterangan |
 |----------|------------|
-| `GITHUB_URL` | URL repo atau organisasi (wajib) |
-| `ACCESS_TOKEN` | PAT, untuk token registrasi otomatis |
-| `REGISTRATION_TOKEN` | Alternatif manual dari ACCESS_TOKEN |
-| `RUNNER_NAME` | Nama runner yang tampil di GitHub |
-| `RUNNER_LABELS` | Label, dipakai di `runs-on` (pisahkan dengan koma) |
-| `RUNNER_GROUP` | Runner group (khusus organisasi, opsional) |
-| `EPHEMERAL` | Isi `1` agar runner hanya mengerjakan satu job lalu hilang |
-| `RUNNER_VERSION` | Versi runner, default `latest` (minimal 2.329.0), lihat [rilis actions/runner](https://github.com/actions/runner/releases) |
-| `TZ` | Timezone, default `Asia/Jakarta` |
+| `RUNNER_SCOPE` | `repo` atau `org` |
+| `REPO_URL` / `ORG_NAME` | Target runner, sesuai scope |
+| `ACCESS_TOKEN` | PAT, dipakai untuk registrasi otomatis |
+| `RUNNER_NAME` | Nama runner di GitHub |
+| `RUNNER_LABELS` | Label untuk `runs-on` (pisahkan dengan koma) |
+| `RUNNER_GROUP` | Runner group (khusus org, opsional) |
+| `EPHEMERAL` | Isi `1` agar runner hanya mengerjakan satu job |
+| `WORK_DIR` | Folder kerja job, **path sama di host dan container** (default `/opt/github-runner/work`) |
+| `RUNNER_IMAGE_TAG` | Tag image, default `latest` |
+| `DNS1`, `DNS2` | DNS container |
+| `TZ` | Timezone |
 
 ## Langkah 3 - Jalankan
 
 ```bash
-make up      # build image + start container
-make logs    # pantau log
-```
-
-Log yang menandakan sukses:
-
-```
-√ Runner successfully added
-√ Runner connection is good
-Listening for Jobs
+make up
+make logs
 ```
 
 Cek di GitHub: Settings → Actions → Runners. Status runner harus **Idle**.
 
 ## Langkah 4 - Pakai di workflow
+
+Seperti `image:` di GitLab, pakai `container:` supaya PHP, Node, dan lainnya tersedia tanpa dipasang manual:
 
 ```yaml
 name: CI
@@ -92,11 +80,15 @@ on: [push]
 jobs:
   build:
     runs-on: [self-hosted, docker]
+    container: php:8.3-cli        # setara "image:" di GitLab
     steps:
       - uses: actions/checkout@v4
-      - run: docker version
-      - run: echo "Jalan di self-hosted runner"
+      - run: php -v
 ```
+
+Untuk Composer, pakai image yang sudah berisi PHP dan Composer, misalnya `container: composer:2`, atau image kustom Anda.
+
+Tanpa `container:`, job berjalan langsung di dalam container runner, yang tidak berisi PHP atau Node.
 
 Label di `runs-on` harus sama dengan `RUNNER_LABELS`.
 
@@ -104,41 +96,35 @@ Label di `runs-on` harus sama dengan `RUNNER_LABELS`.
 
 | Perintah | Fungsi |
 |----------|--------|
-| `make up` | Build + jalankan runner |
-| `make down` | Stop + hapus container (runner otomatis di-unregister) |
+| `make up` | Jalankan runner |
+| `make down` | Stop + hapus container |
 | `make restart` | `down` lalu `up` |
-| `make rebuild` | Build ulang tanpa cache + recreate |
+| `make rebuild` | Pull image terbaru + recreate |
 | `make logs` | Ikuti log |
 | `make ps` | Status container |
 | `make shell` | Masuk ke container |
 
 ## Scale (banyak runner)
 
-Hapus baris `container_name` di `docker-compose.yml`, kosongkan `RUNNER_NAME` agar memakai hostname unik, lalu:
+Hapus `container_name` di `docker-compose.yml`, kosongkan `RUNNER_NAME`, lalu:
 
 ```bash
 docker compose up -d --scale github-runner=3
 ```
 
-## Update versi runner
-
-Dengan `RUNNER_VERSION=latest`, cukup jalankan `make rebuild` untuk mendapat rilis terbaru. Atau isi versi tertentu di `.env` lalu `make rebuild`.
+Beberapa runner berbagi `WORK_DIR` yang sama. Untuk beban berat, lebih aman jalankan stack terpisah dengan `WORK_DIR` berbeda.
 
 ## Troubleshooting
 
 | Masalah | Solusi |
 |---------|--------|
-| `GITHUB_URL wajib diisi` | Isi `GITHUB_URL` di `.env` |
-| `Isi ACCESS_TOKEN atau REGISTRATION_TOKEN` | Isi salah satu token di `.env` |
-| HTTP 404 saat ambil token | `GITHUB_URL` salah, atau PAT tidak punya scope/akses ke repo atau org tersebut |
-| HTTP 401/403 saat ambil token | PAT salah atau kedaluwarsa, atau Anda bukan admin repo/org |
-| `Http response code: NotFound ... registration` | Registration token sudah lebih dari 1 jam, ambil yang baru atau pakai `ACCESS_TOKEN` |
-| `Libicu's dependencies is missing` | Pastikan `libicu74` ada di Dockerfile, lalu `make rebuild` |
-| `Could not resolve host: api.github.com` | DNS container bermasalah. Set `DNS1`/`DNS2` di `.env` (default 1.1.1.1 / 8.8.8.8), lalu `make restart` |
-| `runner version is out of date` / 404 di `runner-registration` | Versi runner terlalu lama. Set `RUNNER_VERSION=latest` lalu `make rebuild` |
-| Runner tampil Offline setelah `make down` | Unregister gagal. Hapus manual di Settings → Actions → Runners |
-| `permission denied` ke docker.sock | Pastikan `/var/run/docker.sock` ada di host dan di-mount (sudah di compose) |
-| Runner lama dengan nama sama | Entrypoint memakai `--replace`, jadi nama yang sama akan menggantikannya |
+| 404 saat registrasi | `REPO_URL`/`ORG_NAME` salah, atau PAT tidak punya scope/akses yang cukup |
+| 401/403 saat registrasi | PAT salah, kedaluwarsa, atau Anda bukan admin repo/org |
+| `Could not resolve host` | Set `DNS1`/`DNS2` di `.env`, lalu `make restart` |
+| `runner version is out of date` | `make rebuild` untuk menarik image terbaru |
+| Job dengan `container:` gagal soal mount/path | Pastikan `WORK_DIR` sama persis di host dan container (sudah di compose) |
+| `Access to the path ... is denied` | Folder `WORK_DIR` di host harus bisa ditulis container (`sudo chmod 777 /opt/github-runner/work`, atau pilih folder lain) |
+| Runner tampil Offline setelah `make down` | Hapus manual di Settings → Actions → Runners |
 
 ## Catatan keamanan
 

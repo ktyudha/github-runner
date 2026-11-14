@@ -3,16 +3,16 @@
 .PHONY: help up down restart rebuild logs ps shell
 
 help:
-	@echo "up       - build + jalankan github-runner"
+	@echo "up       - jalankan github-runner"
 	@echo "down     - stop + hapus container (runner di-unregister)"
 	@echo "restart  - down lalu up"
-	@echo "rebuild  - build ulang tanpa cache + recreate"
+	@echo "rebuild  - pull image terbaru + recreate"
 	@echo "logs     - ikuti log runner"
 	@echo "ps       - status container"
 	@echo "shell    - masuk ke container"
 
 up:
-	docker compose up -d --build
+	docker compose up -d
 
 down:
 	docker compose down --remove-orphans
@@ -20,7 +20,7 @@ down:
 restart: down up
 
 rebuild:
-	docker compose build --no-cache
+	docker compose pull
 	docker compose up -d --force-recreate
 
 logs:

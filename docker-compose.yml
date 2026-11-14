@@ -2,29 +2,25 @@ name: github-runner
 
 services:
   github-runner:
-    build:
-      context: .
-      args:
-        RUNNER_VERSION: ${RUNNER_VERSION:-latest}
-    image: github-runner:${RUNNER_VERSION:-latest}
+    image: myoung34/github-runner:${RUNNER_IMAGE_TAG:-latest}
     container_name: github-runner
     restart: unless-stopped
     dns:
       - ${DNS1:-1.1.1.1}
       - ${DNS2:-8.8.8.8}
     environment:
-      - TZ=${TZ:-Asia/Jakarta}
-      - GITHUB_URL=${GITHUB_URL}
-      - ACCESS_TOKEN=${ACCESS_TOKEN:-}
-      - REGISTRATION_TOKEN=${REGISTRATION_TOKEN:-}
-      - RUNNER_NAME=${RUNNER_NAME:-self-hosted-runner}
-      - RUNNER_LABELS=${RUNNER_LABELS:-self-hosted,docker}
-      - RUNNER_GROUP=${RUNNER_GROUP:-}
-      - EPHEMERAL=${EPHEMERAL:-}
+      TZ: ${TZ:-Asia/Jakarta}
+      RUNNER_SCOPE: ${RUNNER_SCOPE:-repo}        # repo | org
+      REPO_URL: ${REPO_URL:-}
+      ORG_NAME: ${ORG_NAME:-}
+      ACCESS_TOKEN: ${ACCESS_TOKEN:-}
+      RUNNER_NAME: ${RUNNER_NAME:-self-hosted-runner}
+      LABELS: ${RUNNER_LABELS:-self-hosted,docker}
+      RUNNER_GROUP: ${RUNNER_GROUP:-}
+      EPHEMERAL: ${EPHEMERAL:-}
+      # path kerja HARUS sama di host dan di container (agar `container:` di workflow jalan)
+      RUNNER_WORKDIR: ${WORK_DIR:-/opt/github-runner/work}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - runner-work:/home/runner/actions-runner/_work
+      - ${WORK_DIR:-/opt/github-runner/work}:${WORK_DIR:-/opt/github-runner/work}
     stop_grace_period: 1m
-
-volumes:
-  runner-work:
