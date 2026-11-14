@@ -1,6 +1,7 @@
 FROM ubuntu:24.04
 
-ARG RUNNER_VERSION=2.321.0
+# 'latest' = ambil rilis terbaru dari GitHub saat build (GitHub menolak runner versi lama)
+ARG RUNNER_VERSION=latest
 ARG TARGETARCH
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -20,6 +21,10 @@ USER runner
 WORKDIR /home/runner/actions-runner
 
 RUN ARCH=$([ "$TARGETARCH" = "arm64" ] && echo arm64 || echo x64) \
+    && if [ "$RUNNER_VERSION" = "latest" ]; then \
+         RUNNER_VERSION=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name | sed 's/^v//'); \
+       fi \
+    && echo "Runner version: ${RUNNER_VERSION}" \
     && curl -fsSL -o runner.tar.gz \
        "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${ARCH}-${RUNNER_VERSION}.tar.gz" \
     && tar xzf runner.tar.gz && rm runner.tar.gz \

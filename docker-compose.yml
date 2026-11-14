@@ -5,8 +5,8 @@ services:
     build:
       context: .
       args:
-        RUNNER_VERSION: ${RUNNER_VERSION:-2.321.0}
-    image: github-runner:${RUNNER_VERSION:-2.321.0}
+        RUNNER_VERSION: ${RUNNER_VERSION:-latest}
+    image: github-runner:${RUNNER_VERSION:-latest}
     container_name: github-runner
     restart: unless-stopped
     dns:

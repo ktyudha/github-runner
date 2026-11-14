@@ -63,7 +63,7 @@ RUNNER_LABELS=self-hosted,docker
 | `RUNNER_LABELS` | Label, dipakai di `runs-on` (pisahkan dengan koma) |
 | `RUNNER_GROUP` | Runner group (khusus organisasi, opsional) |
 | `EPHEMERAL` | Isi `1` agar runner hanya mengerjakan satu job lalu hilang |
-| `RUNNER_VERSION` | Versi runner, lihat [rilis actions/runner](https://github.com/actions/runner/releases) |
+| `RUNNER_VERSION` | Versi runner, default `latest` (minimal 2.329.0), lihat [rilis actions/runner](https://github.com/actions/runner/releases) |
 | `TZ` | Timezone, default `Asia/Jakarta` |
 
 ## Langkah 3 - Jalankan
@@ -122,8 +122,7 @@ docker compose up -d --scale github-runner=3
 
 ## Update versi runner
 
-1. Ubah `RUNNER_VERSION` di `.env`.
-2. Jalankan `make rebuild`.
+Dengan `RUNNER_VERSION=latest`, cukup jalankan `make rebuild` untuk mendapat rilis terbaru. Atau isi versi tertentu di `.env` lalu `make rebuild`.
 
 ## Troubleshooting
 
@@ -136,6 +135,7 @@ docker compose up -d --scale github-runner=3
 | `Http response code: NotFound ... registration` | Registration token sudah lebih dari 1 jam, ambil yang baru atau pakai `ACCESS_TOKEN` |
 | `Libicu's dependencies is missing` | Pastikan `libicu74` ada di Dockerfile, lalu `make rebuild` |
 | `Could not resolve host: api.github.com` | DNS container bermasalah. Set `DNS1`/`DNS2` di `.env` (default 1.1.1.1 / 8.8.8.8), lalu `make restart` |
+| `runner version is out of date` / 404 di `runner-registration` | Versi runner terlalu lama. Set `RUNNER_VERSION=latest` lalu `make rebuild` |
 | Runner tampil Offline setelah `make down` | Unregister gagal. Hapus manual di Settings → Actions → Runners |
 | `permission denied` ke docker.sock | Pastikan `/var/run/docker.sock` ada di host dan di-mount (sudah di compose) |
 | Runner lama dengan nama sama | Entrypoint memakai `--replace`, jadi nama yang sama akan menggantikannya |
