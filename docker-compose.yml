@@ -9,6 +9,9 @@ services:
     image: github-runner:${RUNNER_VERSION:-2.321.0}
     container_name: github-runner
     restart: unless-stopped
+    dns:
+      - ${DNS1:-1.1.1.1}
+      - ${DNS2:-8.8.8.8}
     environment:
       - TZ=${TZ:-Asia/Jakarta}
       - GITHUB_URL=${GITHUB_URL}

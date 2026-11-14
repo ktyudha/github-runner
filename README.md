@@ -134,6 +134,8 @@ docker compose up -d --scale github-runner=3
 | HTTP 404 saat ambil token | `GITHUB_URL` salah, atau PAT tidak punya scope/akses ke repo atau org tersebut |
 | HTTP 401/403 saat ambil token | PAT salah atau kedaluwarsa, atau Anda bukan admin repo/org |
 | `Http response code: NotFound ... registration` | Registration token sudah lebih dari 1 jam, ambil yang baru atau pakai `ACCESS_TOKEN` |
+| `Libicu's dependencies is missing` | Pastikan `libicu74` ada di Dockerfile, lalu `make rebuild` |
+| `Could not resolve host: api.github.com` | DNS container bermasalah. Set `DNS1`/`DNS2` di `.env` (default 1.1.1.1 / 8.8.8.8), lalu `make restart` |
 | Runner tampil Offline setelah `make down` | Unregister gagal. Hapus manual di Settings → Actions → Runners |
 | `permission denied` ke docker.sock | Pastikan `/var/run/docker.sock` ada di host dan di-mount (sudah di compose) |
 | Runner lama dengan nama sama | Entrypoint memakai `--replace`, jadi nama yang sama akan menggantikannya |
