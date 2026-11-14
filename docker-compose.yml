@@ -1,0 +1,27 @@
+name: github-runner
+
+services:
+  github-runner:
+    build:
+      context: .
+      args:
+        RUNNER_VERSION: ${RUNNER_VERSION:-2.321.0}
+    image: github-runner:${RUNNER_VERSION:-2.321.0}
+    container_name: github-runner
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-Asia/Jakarta}
+      - GITHUB_URL=${GITHUB_URL}
+      - ACCESS_TOKEN=${ACCESS_TOKEN:-}
+      - REGISTRATION_TOKEN=${REGISTRATION_TOKEN:-}
+      - RUNNER_NAME=${RUNNER_NAME:-self-hosted-runner}
+      - RUNNER_LABELS=${RUNNER_LABELS:-self-hosted,docker}
+      - RUNNER_GROUP=${RUNNER_GROUP:-}
+      - EPHEMERAL=${EPHEMERAL:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - runner-work:/home/runner/actions-runner/_work
+    stop_grace_period: 1m
+
+volumes:
+  runner-work:
